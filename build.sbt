@@ -1,4 +1,4 @@
-name := "Overview"
+name := "ScalaInDepth"
 
 version := "0.1"
 
