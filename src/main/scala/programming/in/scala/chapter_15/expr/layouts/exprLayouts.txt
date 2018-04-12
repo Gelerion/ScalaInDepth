@@ -1,0 +1,32 @@
+After having learned the different forms of patterns, you might be interested in seeing them applied in a
+larger example. The proposed task is to write an expression formatter class that displays an arithmetic
+expression in a two-dimensional layout. Divisions such as "x / (x + 1)" should be printed vertically, by
+placing the numerator on top of the denominator, like this:
+
+  x
+-----
+x + 1
+
+As another example, here's the expression ((a / (b * c) + 1 / n) / 3) in two dimensional layout:
+
+  a     1
+----- + -
+b * c   n
+---------
+    3
+
+A useful first step is to concentrate on horizontal layout. A structured expression like:
+
+  BinOp("+",
+        BinOp("*",
+              BinOp("+", Var("x"), Var("y")),
+              Var("z")),
+        Number(1))
+
+should print (x + y) * z + 1.
+Note that parentheses are mandatory around x + y, but would be optional around (x + y) * z. To keep the layout as
+legible as possible, your goal should be to omit parentheses wherever they are redundant, while ensuring that all
+necessary parentheses are present.
+
+To know where to put parentheses, the code needs to know about the relative precedence of each operator,
+so it's a good idea to tackle this first.

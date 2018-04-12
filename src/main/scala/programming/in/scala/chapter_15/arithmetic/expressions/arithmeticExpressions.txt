@@ -1,0 +1,3 @@
+Before delving into all the rules and nuances of pattern matching, it is worth looking at a simple example to get
+the general idea. Let's say you need to write a library that manipulates arithmetic expressions, perhaps
+as part of a domain-specific language you are designing.

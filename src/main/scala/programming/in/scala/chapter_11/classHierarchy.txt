@@ -1,0 +1,33 @@
+The root class Any has two subclasses: AnyVal and AnyRef. AnyVal is the parent class of value classes in Scala.
+While you can define your own value classes (see Section 11.4), there are nine value classes built into Scala:
+Byte, Short, Char, Int, Long, Float, Double, Boolean, and Unit. The first eight of these correspond to Java's
+primitive types, and their values are represented at run time as Java's primitive values. The instances of these
+classes are all written as literals in Scala. For example, 42 is an instance of Int, 'x' is an instance of Char,
+and false an instance of Boolean. You cannot create instances of these classes using new. This is enforced by the
+"trick" that value classes are all defined to be both abstract and final.
+
+So if you were to write:
+    scala> new Int
+you would get:
+    <console>:5: error: class Int is abstract; cannot be
+      instantiated
+             new Int
+             ^
+
+The other value class, Unit, corresponds roughly to Java's void type; it is used as the result type of a method that
+does not otherwise return an interesting result. Unit has a single instance value, which is written ()
+
+Note that the value class space is flat; all value classes are subtypes of scala.AnyVal, but they do not subclass each other.
+
+The other subclass of the root class Any is class AnyRef. This is the base class of all reference classes in Scala.
+As mentioned previously, on the Java platform AnyRef is in fact just an alias for class java.lang.Object. So classes
+written in Java, as well as classes written in Scala, all inherit from AnyRef. One way to think of java.lang.Object,
+therefore, is as the way AnyRef is implemented on the Java platform. Thus, although you can use Object and AnyRef
+interchangeably in Scala programs on the Java platform, the recommended style is to use AnyRef everywhere.
+
+! The only case where == does not directly call equals is for Java's boxed numeric classes, such as Integer or Long.
+In Java, a new Integer(1) does not equal a new Long(1) even though for primitive values 1 == 1L. Since Scala is a more
+regular language than Java, it was necessary to correct this discrepancy by special-casing the == method for these classes.
+Likewise, the ## method provides a Scala version of hashing that is the same as Java's hashCode, except for boxed numeric
+types, where it works consistently with ==. For instance new Integer(1) and new Long(1) hash the same with ## even
+though their Java hashCodes are different.

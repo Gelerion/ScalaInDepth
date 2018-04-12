@@ -1,0 +1,172 @@
+The rest of this chapter presents a case study that explains how abstract types can be used in Scala. The task is to
+design a class Currency. A typical instance of Currency would represent an amount of money in dollars, euros, yen, or
+some other currency. It should be possible to do some arithmetic on currencies. For instance, you should be able to add
+two amounts of the same currency. Or you should be able to multiply a currency amount by a factor representing an interest rate.
+
+These thoughts lead to the following first design for a currency class:
+      // A first (faulty) design of the Currency class
+      abstract class Currency {
+        val amount: Long
+        def designation: String
+        override def toString = amount + " " + designation
+        def + (that: Currency): Currency = ...
+        def * (x: Double): Currency = ...
+      }
+The amount of a currency is the number of currency units it represents. This is a field of type Long so that very large
+amounts of money, such as the market capitalization of Google or Apple, can be represented. It's left abstract here,
+waiting to be defined when a subclass talks about concrete amounts of money. The designation of a currency is a string
+that identifies it. The toString method of class Currency indicates an amount and a designation.
+It would yield results such as:
+
+  79 USD
+  11000 Yen
+  99 Euro
+
+Finally, there are methods + for adding currencies and * for multiplying a currency with a floating-point number.
+You can create a concrete currency value by supplying concrete amount and designation values, like this:
+
+  new Currency {
+    val amount = 79L
+    def designation = "USD"
+  }
+
+This design would be OK if all we wanted to model was a single currency, like only dollars or only euros. But it fails
+if we need to deal with several currencies. Assume that you model dollars and euros as two subclasses of class currency:
+
+  abstract class Dollar extends Currency {
+    def designation = "USD"
+  }
+  abstract class Euro extends Currency {
+    def designation = "Euro"
+  }
+
+At first glance this looks reasonable. But it would let you add dollars to euros. The result of such an addition would
+be of type Currency. But it would be a funny currency that was made up of a mix of euros and dollars. What you want
+instead is a more specialized version of the + method. When implemented in class Dollar, it should take Dollar arguments
+and yield a Dollar result; when implemented in class Euro, it should take Euro arguments and yield a Euro result. So the
+type of the addition method would change depending on which class you are in. Nonetheless, you would like to write the
+addition method just once, not each time a new currency is defined.
+
+// --------------------------------------------------------------------------------------
+
+In Scala, there's a simple technique to deal with situations like this. If something is not known at the point where
+a class is defined, make it abstract in the class. This applies to both values and types. In the case of currencies,
+the exact argument and result type of the addition method are not known, so it is a good candidate for an abstract type.
+
+This would lead to the following sketch of class AbstractCurrency:
+
+  // A second (still imperfect) design of the Currency class
+  abstract class AbstractCurrency {
+    type Currency <: AbstractCurrency
+    val amount: Long
+    def designation: String
+    override def toString = amount + " " + designation
+    def + (that: Currency): Currency = ...
+    def * (x: Double): Currency = ...
+  }
+
+The only differences from the previous situation are that the class is now called AbstractCurrency, and that it
+contains an abstract type Currency, which represents the real currency in question. Each concrete subclass of
+AbstractCurrency would need to fix the Currency type to refer to the concrete subclass itself, thereby "tying the knot."
+
+For instance, here is a new version of class Dollar, which now extends class AbstractCurrency:
+
+  abstract class Dollar extends AbstractCurrency {
+    type Currency = Dollar
+    def designation = "USD"
+  }
+
+This design is workable, but it is still not perfect. One problem is hidden by the ellipses that indicate the missing
+method definitions of + and * in class AbstractCurrency. In particular, how should addition be implemented in this class?
+It's easy enough to calculate the correct amount of the new currency as this.amount + that.amount, but how would you
+convert the amount into a currency of the right type?
+
+You might try something like:
+
+  def + (that: Currency): Currency = new Currency {
+    val amount = this.amount + that.amount
+  }
+
+However, this would not compile:
+
+  error: class type required
+    def + (that: Currency): Currency = new Currency {
+                                           ^
+
+One of the restrictions of Scala's treatment of abstract types is that you can neither create an instance of an abstract
+type nor have an abstract type as a supertype of another class. So the compiler would refuse the example code here
+that attempted to instantiate Currency.
+
+However, you can work around this restriction using a factory method. Instead of creating an instance of an abstract
+type directly, declare an abstract method that does it. Then, wherever the abstract type is fixed to be some concrete
+type, you also need to give a concrete implementation of the factory method. For class AbstractCurrency,
+this would look as follows:
+
+  abstract class AbstractCurrency {
+    type Currency <: AbstractCurrency // abstract type
+    def make(amount: Long): Currency  // factory method
+    ...                               // rest of class
+  }
+
+A design like this could be made to work, but it looks rather suspicious. Why place the factory method inside class
+AbstractCurrency? This looks dubious for at least two reasons. First, if you have some amount of currency (say, one dollar),
+you also hold in your hand the ability to make more of the same currency, using code such as:
+
+  myDollar.make(100)  // here are a hundred more!
+
+In the age of color copying this might be a tempting scenario, but hopefully not one which you would be able to do
+for very long without being caught. The second problem with this code is that you can make more Currency objects if
+you already have a reference to a Currency object. But how do you get the first object of a given Currency? You'd need
+another creation method, which does essentially the same job as make. So you have a case of code duplication, which
+is a sure sign of a code smell.
+
+// --------------------------------------------------------------------------------------
+
+The solution, of course, is to move the abstract type and the factory method outside class AbstractCurrency. You need
+to create another class that contains the AbstractCurrency class, the Currency type, and the make factory method.
+
+We'll call this a CurrencyZone:
+    abstract class CurrencyZone {
+        type Currency <: AbstractCurrency
+        def make(x: Long): Currency
+        abstract class AbstractCurrency {
+          val amount: Long
+          def designation: String
+          override def toString = amount + " " + designation
+          def + (that: Currency): Currency =
+            make(this.amount + that.amount)
+          def * (x: Double): Currency =
+            make((this.amount * x).toLong)
+        }
+    }
+
+An example concrete CurrencyZone is the US, which could be defined as:
+
+  object US extends CurrencyZone {
+    abstract class Dollar extends AbstractCurrency {
+      def designation = "USD"
+    }
+    type Currency = Dollar
+    def make(x: Long) = new Dollar { val amount = x }
+  }
+
+// --------------------------------------------------------------------------------------
+This is a workable design. There are only a few refinements to be added. The first refinement concerns subunits. So far,
+every currency was measured in a single unit: dollars, euros, or yen. However, most currencies have subunits: For
+instance, in the US, it's dollars and cents. The most straightforward way to model cents is to have the amount
+field in US.Currency represent cents instead of dollars. To convert back to dollars, it's useful to introduce a
+field CurrencyUnit into class CurrencyZone, which contains the amount of one standard unit in that currency:
+
+  class CurrencyZone {
+    ...
+    val CurrencyUnit: Currency
+  }
+
+The US object could define the quantities Cent, Dollar, and CurrencyUnit. This definition is just like the previous
+definition of the US object, except that it adds three new fields. The field Cent represents an amount of 1 US.Currency.
+It's an object analogous to a one-cent coin. The field Dollar represents an amount of 100 US.Currency. So the US object
+now defines the name Dollar in two ways. The type Dollar (defined by the abstract inner class named Dollar) represents
+the generic name of the Currency valid in the US currency zone. By contrast, the value Dollar (referenced from the val
+field named Dollar) represents a single US dollar, analogous to a one-dollar bill. The third field definition of
+CurrencyUnit specifies that the standard currency unit in the US zone is the Dollar (i.e., the value Dollar, referenced
+from the field, not the type Dollar).

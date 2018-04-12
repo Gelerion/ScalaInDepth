@@ -1,0 +1,6 @@
+value type
+    A value type is any subclass of AnyVal, such as Int, Double, or Unit. This term has meaning at the level
+    of Scala source code. At runtime, instances of value types that correspond to Java primitive types may be
+    implemented in terms of primitive type values or instances of wrapper types, such as java.lang.Integer.
+    Over the lifetime of a value type instance, the runtime may transform it back and forth between primitive
+    and wrapper types (i.e., to box and unbox it).
