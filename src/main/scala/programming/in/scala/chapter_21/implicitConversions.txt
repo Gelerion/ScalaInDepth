@@ -1,0 +1,72 @@
+There's a fundamental difference between your own code and other people's libraries: You can change or extend your own
+code as you wish, but if you want to use someone else's libraries, you usually have to take them as they are. A number
+of constructs have sprung up in programming languages to alleviate this problem. Ruby has modules, and Smalltalk lets
+packages add to each other's classes. These are very powerful but also dangerous, in that you can modify the behavior
+of a class for an entire application, some parts of which you might not know. C# 3.0 has static extension methods, which
+are more local but also more restrictive, in that you can only add methods, not fields, to a class, and you can't make a
+class implement new interfaces.
+
+Scala's answer is implicit conversions and parameters. These can make existing libraries much more pleasant to deal with
+by letting you leave out tedious, obvious details that obscure the interesting parts of your code. Used tastefully, this
+results in code that is focused on the interesting, non-trivial parts of your program.
+
+RULES FOR IMPLICITS
+Implicit definitions are those that the compiler is allowed to insert into a program in order to fix any of its type errors.
+For example, if x + y does not type check, then the compiler might change it to convert(x) + y, where convert is some
+available implicit conversion. If convert changes x into something that has a + method, then this change might fix a
+program so that it type checks and runs correctly. If convert really is just a simple conversion function, then leaving
+it out of the source code can be a clarification.
+
+Implicit conversions are governed by the following general rules:
+ - Marking rule: Only definitions marked implicit are available
+    The implicit keyword is used to mark which declarations the compiler may use as implicits.
+    You can use it to mark any variable, function, or object definition
+         implicit def intToString(x: Int) = x.toString
+    The compiler will only change x + y to convert(x) + y if convert is marked as implicit. This way, you avoid the
+    confusion that would result if the compiler picked random functions that happen to be in scope and inserted them
+    as "conversions." The compiler will only select among the definitions you have explicitly marked as implicit.
+
+ - Scope rule: An inserted implicit conversion must be in scope as a single identifier,
+               or be associated with the source or target type of the conversion
+    The Scala compiler will only consider implicit conversions that are in scope. To make an implicit conversion available,
+    therefore, you must in some way bring it into scope. Moreover, with one exception, the implicit conversion must be in
+    scope as a single identifier. The compiler will not insert a conversion of the form someVariable.convert. For example,
+    it will not expand x + y to someVariable.convert(x) + y. If you want to make someVariable.convert available as an implicit,
+    you would need to import it, which would make it available as a single identifier. Once imported, the compiler would be
+    free to apply it as convert(x) + y. In fact, it is common for libraries to include a Preamble object including a number
+    of useful implicit conversions. Code that uses the library can then do a single "import Preamble._" to access the
+    library's implicit conversions.
+
+    There's one exception to the "single identifier" rule. The compiler will also look for implicit definitions in the
+    companion object of the source or expected target types of the conversion. For example, if you're attempting to pass
+    a Dollar object to a method that takes a Euro, the source type is Dollar and the target type is Euro. You could,
+    therefore, package an implicit conversion from Dollar to Euro in the companion object of either class, Dollar or Euro.
+    Here's an example in which the implicit definition is placed in Dollar's companion object:
+
+      object Dollar {
+        implicit def dollarToEuro(x: Dollar): Euro = ...
+      }
+      class Dollar { ... }
+
+    In this case, the conversion dollarToEuro is said to be associated to the type Dollar. The compiler will find such
+    an associated conversion every time it needs to convert from an instance of type Dollar. There's no need to import
+    the conversion separately into your program.
+
+    The Scope Rule helps with modular reasoning. When you read code in a file, the only things you need to consider
+    from other files are those that are either imported or are explicitly referenced through a fully qualified name.
+    This benefit is at least as important for implicits as for explicitly written code. If implicits took effect
+    system-wide, then to understand a file you would have to know about every implicit introduced anywhere in the program!
+
+ - One-at-a-time rule: Only one implicit is inserted
+    The compiler will never rewrite x + y to convert1(convert2(x)) + y. Doing so would cause compile times to increase
+    dramatically on erroneous code, and it would increase the difference between what the programmer writes and what the
+    program actually does. For sanity's sake, the compiler does not insert further implicit conversions when it is already
+    in the middle of trying another implicit. However, it's possible to circumvent this restriction by having implicits
+    take implicit parameters, which will be described later in this chapter.
+
+ - Explicits-first rule: Whenever code type checks as it is written, no implicits are attempted
+    The compiler will not change code that already works. A corollary of this rule is that you can always replace implicit
+    identifiers by explicit ones, thus making the code longer but with less apparent ambiguity. You can trade between
+    these choices on a case-by-case basis. Whenever you see code that seems repetitive and verbose, implicit conversions
+    can help you decrease the tedium. Whenever code seems terse to the point of obscurity, you can insert conversions
+    explicitly. The amount of implicits you leave the compiler to insert is ultimately a matter of style.
