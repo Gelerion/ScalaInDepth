@@ -1,0 +1,94 @@
+Lists are not "built-in" as a language construct in Scala; they are defined by an abstract class
+List in the scala package, which comes with two subclasses for :: and Nil.
+
+List is an abstract class, so you cannot define elements by calling the empty List constructor.
+For instance the expression "new List" would be illegal. The class has a type parameter T.
+The + in front of this type parameter specifies that lists are covariant
+
+            sealed abstract class List[+A]
+                    /              \
+                   /                \
+                  /                  \
+        final case class ::      case object Nil
+
+Because of this property, you can assign a value of type List[Int] to a variable of type List[Any]
+
+All list operations can be defined in terms of three basic methods:
+
+  def isEmpty: Boolean
+  def head: T
+  def tail: List[T]
+
+These three methods are all abstract in class List. They are defined in the subobject Nil and the subclass ::
+
+The Nil object
+
+        case object Nil extends List[Nothing] {
+          override def isEmpty = true
+          def head: Nothing =
+            throw new NoSuchElementException("head of empty list")
+          def tail: List[Nothing] =
+            throw new NoSuchElementException("tail of empty list")
+        }
+
+The Nil object defines an empty list. The Nil object inherits from type List[Nothing]
+Because of covariance, this means that Nil is compatible with every instance of the List type
+
+The :: class
+
+          final case class ::[T](hd: T, tl: List[T]) extends List[T] {
+            def head = hd
+            def tail = tl
+            override def isEmpty: Boolean = false
+          }
+
+Class ::, pronounced "cons" for "construct," represents non-empty lists. It's named that way in order to
+support pattern matching with the infix ::
+Every infix operation in a pattern is treated as a constructor application of the infix operator to its arguments.
+So the pattern x :: xs is treated as ::(x, xs) where :: is a case class.
+
+The definitions of the head and tail method simply return the corresponding parameter. In fact, this pattern can be
+abbreviated by letting the parameters directly implement the head and tail methods of the superclass List, as in the
+following equivalent but shorter definition of the :: class:
+
+  final case class ::[T](head: T, tail: List[T])
+      extends List[T] {
+
+    override def isEmpty: Boolean = false
+  }
+
+This works because every case class parameter is implicitly also a field of the class (it's like the parameter
+declaration was prefixed with val). Scala allows you to implement an abstract parameterless method such as head or tail
+with a field. So the code above directly uses the parameters head and tail as implementations of the abstract methods
+head and tail that were inherited from class List.
+
+Method example:
+    def map[U](f: T => U): List[U] =
+        if (isEmpty) Nil
+        else f(head) :: tail.map(f)
+
+    def drop(n: Int): List[T] =
+       if (isEmpty) Nil
+       else if (n <= 0) this
+       else tail.drop(n - 1)
+
+    def length: Int =
+        if (isEmpty) 0 else 1 + tail.length
+
+
+These infix operations can be expanded to equivalent method calls as follows:
+
+    def :::[U >: T](prefix: List[U]): List[U] =
+          if (prefix.isEmpty) this
+          else prefix.head :: prefix.tail ::: this
+
+  prefix.head :: prefix.tail ::: this
+    equals (because :: and ::: are right-associative)
+
+  prefix.head :: (prefix.tail ::: this)
+    equals (because :: binds to the right)
+
+  (prefix.tail ::: this).::(prefix.head)
+    equals (because ::: binds to the right)
+
+  this.:::(prefix.tail).::(prefix.head)

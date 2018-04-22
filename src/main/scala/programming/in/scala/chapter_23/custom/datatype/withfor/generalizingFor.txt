@@ -1,0 +1,17 @@
+Besides lists and arrays, there are many other types in the Scala standard library that support the same four
+methods and therefore allow for expressions. Examples are ranges, iterators, streams, and all implementations of sets.
+It's also perfectly possible for your own data types to support for expressions by defining the necessary methods.
+To support the full range of for expressions and for loops, you need to define map, flatMap, withFilter, and foreach
+as methods of your data type. But it's also possible to define a subset of these methods, and thereby support a subset
+of all possible for expressions or loops.
+
+Here are the precise rules:
+ - If your type defines just map, it allows for expressions consisting of a single generator.
+ - If it defines flatMap as well as map, it allows for expressions consisting of several generators.
+ - If it defines foreach, it allows for loops (both with single and multiple generators).
+ - If it defines withFilter, it allows for filter expressions starting with an if in the for expression.
+
+The translation of for expressions happens before type checking. This allows for maximum flexibility because the
+only requirement is that the result of expanding a for expression type checks. Scala defines no typing rules for the
+for expressions themselves, and does not require that methods map, flatMap, withFilter, or foreach have any particular
+type signatures.

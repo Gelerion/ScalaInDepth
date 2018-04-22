@@ -1,0 +1,63 @@
+ TRANSLATION OF FOR EXPRESSIONS
+Every for expression can be expressed in terms of the three higher-order functions map, flatMap, and withFilter.
+This section describes the translation scheme, which is also used by the Scala compiler.
+
+--------
+    for (null <- expr_1) yield expr_2
+where x is a variable. Such an expression is translated to:
+    expr_1.map(null => expr_2)
+-------
+
+-------
+    for (null <- expr_1 if expr_2) yield expr_3
+is translated to:
+    for (null <- expr_1 withFilter (null => expr_2)) yield expr_3
+This translation gives another for expression that is shorter by one element than the original, because an if element
+is transformed into an application of withFilter on the first generator expression. The translation then continues with
+this second expression, so in the end you obtain:
+    expr_1 withFilter (null => expr_2) map (null => expr_3)
+-------
+
+-------
+Translating for expressions starting with two generators
+    for (null <- expr_1; null <- expr_2; seq) yield expr_3
+Again, assume that seq is an arbitrary sequence of generators, definitions, and filters. In fact, seq might also be
+empty, and in that case there would not be a semicolon after expr_2. The translation scheme stays the same in each case.
+The for expression above is translated to an application of flatMap:
+    expr_1.flatMap(null => for (null <- expr_2; seq) yield expr_3)
+This time, there is another for expression in the function value passed to flatMap.
+That for expression (which is again simpler by one element than the original) is in turn translated with the same rules.
+-------
+
+-------
+Translating patterns in generators
+The translation scheme becomes more complicated if the left hand side of generator is a pattern, pat, other than a
+simple variable. The case where the for expression binds a tuple of variables is still relatively easy to handle.
+In that case, almost the same scheme as for single variables applies.
+A for expression of the form:
+  for ((null, ..., null) <- expr_1) yield expr_2
+translates to:
+  expr_1.map { case (null, ..., null) => expr_2 }
+Things become a bit more involved if the left hand side of the generator is an arbitrary pattern pat instead
+of a single variable or a tuple.
+In this case:
+  for (pat <- expr_1) yield expr_2
+translates to:
+  expr_1 withFilter {
+    case pat => true
+    case _ => false
+  } map {
+    case pat => expr_2
+  }
+That is, the generated items are first filtered and only those that match pat are mapped.
+Therefore, it's guaranteed that a pattern-matching generator will never throw a MatchError.
+-------
+
+-------
+-------
+
+-------
+-------
+
+-------
+-------
