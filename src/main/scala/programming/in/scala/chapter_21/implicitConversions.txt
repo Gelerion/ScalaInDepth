@@ -70,3 +70,11 @@ Implicit conversions are governed by the following general rules:
     these choices on a case-by-case basis. Whenever you see code that seems repetitive and verbose, implicit conversions
     can help you decrease the tedium. Whenever code seems terse to the point of obscurity, you can insert conversions
     explicitly. The amount of implicits you leave the compiler to insert is ultimately a matter of style.
+
+--- Priority
+How the compiler picked intArrayOps over the other implicit conversion to WrappedArray. After all, both conversions map
+an array to a type that supports a reverse method, which is what the input specified. The answer to that question is that
+the two implicit conversions are prioritized. The ArrayOps conversion has a higher priority than the WrappedArray conversion.
+The first is defined in the Predef object whereas the second is defined in a class scala.LowPriorityImplicits, which is
+a superclass of Predef. Implicits in subclasses and subobjects take precedence over implicits in base classes. So if both
+conversions are applicable, the one in Predef is chosen.
