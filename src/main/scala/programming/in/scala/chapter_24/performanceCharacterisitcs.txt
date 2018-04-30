@@ -1,0 +1,39 @@
+	        head	tail	apply	update	prepend	append	insert
+immutable
+    List	C	C	L	L	C	L	-
+    Stream	C	C	L	L	C	L	-
+    Vector	eC	eC	eC	eC	eC	eC	-
+    Stack	C	C	L	L	C	L	-
+    Queue	aC	aC	L	L	L	C	-
+    Range	C	C	C	-	-	-	-
+    String	C	L	C	L	L	L	-
+
+mutable
+    ArrayBuffer	    C	L	C	C	L	aC	L
+    ListBuffer	    C	L	L	L	C	C	L
+    StringBuilder	C	L	C	C	L	aC	L
+    MutableList	    C	L	L	L	C	C	L
+    Queue	        C	L	L	L	C	C	L
+    ArraySeq	    C	L	C	C	-	-	-
+    Stack	        C	L	L	L	C	L	L
+    ArrayStack	    C	L	C	C	aC	L	L
+    Array	        C	L	C	C	-	-	-
+
+                    lookup	add	remove	min
+immutable
+    HashSet/HashMap	eC	eC	eC	L
+    TreeSet/TreeMap	Log	Log	Log	Log
+    BitSet	        C	L	L	eC
+    ListMap	        L	L	L	L
+
+mutable
+    HashSet/HashMap	eC	eC	eC	L
+    WeakHashMap	    eC	eC	eC	L
+    BitSet	        C	aC	C	eC^a
+
+C	The operation takes (fast) constant time.
+eC	The operation takes effectively constant time, but this might depend on some assumptions such as the maximum length of a vector or the distribution of hash keys.
+aC	The operation takes amortized constant time. Some invocations of the operation might take longer, but if many operations are performed on average only constant time per operation is taken.
+Log	The operation takes time proportional to the logarithm of the collection size.
+L	The operation is linear, that is it takes time proportional to the collection size.
+-	The operation is not supported.
