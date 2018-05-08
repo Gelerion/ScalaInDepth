@@ -1,0 +1,151 @@
+Implementing every collection operation anew for every collection type would lead to an enormous amount of code, most
+of which would be copied from somewhere else. Such code duplication could lead to inconsistencies over time, when an
+operation is added or modified in one part of the collection library but not in others. The principal design objective
+of the new collections framework was to avoid any duplication, defining every operation in as few places as possible.
+The design approach was to implement most operations in collection "templates" that can be flexibly inherited from
+individual base classes and implementations. In this chapter, we will examine these templates, and other classes and
+traits that constitute the "building blocks" of the framework, as well as the construction principles they support.
+
+BUILDERS
+Almost all collection operations are implemented in terms of traversals and builders. Traversals are handled by
+Traversable's foreach method, and building new collections is handled by instances of class Builder.
+
+    package scala.collection.generic
+
+    class Builder[-Elem, +To] {
+      def +=(elem: Elem): this.type
+      def result(): To
+      def clear()
+      def mapResult[NewTo](f: To => NewTo): Builder[Elem, NewTo]
+        = ...
+    }
+
+
+You can add an element x to a builder b with b += x. There's also syntax to add more than one element at once:
+For instance, b += (x, y) and b ++= xs work as for buffers. (In fact, buffers are an enriched version of builders.)
+The result() method returns a collection from a builder. The state of the builder is undefined after taking its result,
+but it can be reset into a new empty state using clear(). Builders are generic in both the element type, Elem, and in
+the type, To, of collections they return.
+
+Often, a builder can refer to some other builder for assembling the elements of a collection, but then would like to
+transform the result of the other builder—for example, to give it a different type. This task is simplified by method
+mapResult in class Builder. Suppose for instance you have an array buffer buf. Array buffers are builders for themselves,
+so taking the result() of an array buffer will return the same buffer. If you want to use this buffer to produce a
+builder that builds arrays, you can use mapResult:
+
+  scala> val buf = new ArrayBuffer[Int]
+  buf: scala.collection.mutable.ArrayBuffer[Int] = ArrayBuffer()
+
+  scala> val bldr = buf mapResult (_.toArray)
+  bldr: scala.collection.mutable.Builder[Int,Array[Int]] = ArrayBuffer()
+
+The result value, bldr, is a builder that uses the array buffer, buf, to collect elements. When a result is demanded
+from bldr, the result of buf is computed, which yields the array buffer buf itself. This array buffer is then mapped
+with _.toArray to an array. So the end result is that bldr is a builder for arrays.
+
+The Scala collection library avoids code duplication and achieves the "same-result-type" principle by using generic
+builders and traversals over collections in so-called implementation traits.
+These traits are named with a Like suffix; for instance, IndexedSeqLike is the implementation trait for IndexedSeq,
+and similarly, TraversableLike is the implementation trait for Traversable. Collection classes such as Traversable or
+IndexedSeq inherit all their concrete method implementations from these traits. Implementation traits have two type
+parameters instead of one for normal collections. They parameterize not only over the collection's element type, but
+also over the collection's representation type (i.e., the type of the underlying collection), such as Seq[I] or List[T]
+For instance, here is the header of trait TraversableLike:
+
+  trait TraversableLike[+Elem, +Repr] { ... }
+
+The type parameter, Elem, stands for the element type of the traversable whereas the type parameter Repr stands for its
+representation. There are no constraints on Repr. In particular Repr might be instantiated to a type that is itself not
+a subtype of Traversable. That way, classes outside the collections hierarchy, such as String and Array, can still make
+use of all operations defined in a collection implementation trait.
+
+    package scala.collection
+
+    trait TraversableLike[+Elem, +Repr] {
+      def newBuilder: Builder[Elem, Repr] // deferred
+      def foreach[U](f: Elem => U)        // deferred
+              ...
+      def filter(p: Elem => Boolean): Repr = {
+        val b = newBuilder
+        foreach { elem => if (p(elem)) b += elem }
+        b.result
+      }
+    }
+
+Taking filter as an example, this operation is defined once for all collection classes in the trait TraversableLike.
+The trait declares two abstract methods, newBuilder and foreach, which are implemented in concrete collection classes.
+The filter operation is implemented in the same way for all collections using these methods. It first constructs a new
+builder for the representation type Repr, using newBuilder. It then traverses all elements of the current collection,
+using foreach. If an element x satisfies the given predicate p—i.e., p(x) is true—it is added with the builder. Finally,
+the elements collected in the builder are returned as an instance of the Repr collection type by calling the builder's result method.
+
+The map operation on collections is a bit more complicated. For instance, if f is a function from String to Int, and xs
+is a List[String], then xs map f should give a List[Int]. Likewise, if ys is an Array[String], then ys map f should give
+a Array[Int]. But how do you achieve that without duplicating the definition of the map method in lists and arrays?
+
+The newBuilder/foreach framework shown in Listing 25.2 is not sufficient for this because it only allows creation of new
+instances of the same collection type, whereas map needs an instance of the same collection type constructor but possibly
+with a different element type. What's more, even the result type constructor of a function like map might depend, in
+non-trivial ways, on the other argument types. Here is an example:
+
+  scala> import collection.immutable.BitSet
+  import collection.immutable.BitSet
+
+  scala> val bits = BitSet(1, 2, 3)
+  bits: scala.collection.immutable.BitSet = BitSet(1, 2, 3)
+
+  scala> bits map (_ * 2)
+  res13: scala.collection.immutable.BitSet = BitSet(2, 4, 6)
+
+  scala> bits map (_.toFloat)
+  res14: scala.collection.immutable.Set[Float] =
+    Set(1.0, 2.0, 3.0)
+
+If you map the doubling function _ * 2 over a bit set you obtain another bit set. However, if you map the function
+(_.toFloat) over the same bit set, the result is a general Set[Float]. Of course, it can't be a bit set because bit
+sets contain Ints, not Floats.
+
+Note that map's result type depends on the type of function that's passed to it. If the result type of that function
+argument is again an Int, the result of map is a BitSet. But if the result type of the function argument is something
+else, the result of map is just a Set. You'll find out soon how this type-flexibility is achieved in Scala.
+
+The problem with BitSet is not an isolated case. Here are two more interactions with the interpreter that both map a
+function over a map:
+
+  scala> Map("a" -> 1, "b" -> 2) map { case (x, y) => (y, x) }
+  res3: scala.collection.immutable.Map[Int,java.lang.String] =
+    Map(1 -> a, 2 -> b)
+
+  scala> Map("a" -> 1, "b" -> 2) map { case (x, y) => y }
+  res4: scala.collection.immutable.Iterable[Int] =
+    List(1, 2)
+
+The first function swaps two arguments of a key/value pair. The result of mapping this function is again a map, but now
+going in the other direction. In fact, the first expression yields the inverse of the original map, provided it is invertible.
+The second function, however, maps the key/value pair to an integer, namely its value component. In that case, we cannot
+form a Map from the results, but we still can form an Iterable, a supertrait of Map.
+
+You might ask, Why not restrict map so that it can always return the same kind of collection? For instance, on bit sets map
+could accept only Int-to-Int functions and on maps it could only accept pair-to-pair functions. Not only are such
+restrictions undesirable from an object-oriented modeling point of view, they are illegal because they would violate
+the Liskov Substitution Principle: A Map is an Iterable. So every operation that's legal on an Iterable must also be legal on a Map.
+
+Scala solves this problem instead with overloading: Not the simple form of overloading inherited by Java (that would not
+ be flexible enough), but the more systematic form of overloading that's provided by implicit parameters.
+
+    def map[B, That](f: Elem => B)
+        (implicit bf: CanBuildFrom[Repr, B, That]): That = {
+      val b = bf(this)
+      for (x <- this) b += f(x)
+      b.result
+    }
+
+
+Summary
+If you want to fully integrate a new collection class into the framework, you need to pay attention to the following points:
+
+ - Decide whether the collection should be mutable or immutable.
+ - Pick the right base traits for the collection.
+ - Inherit from the right implementation trait to implement most collection operations.
+ - If you want map and similar operations to return instances of your collection type, provide an implicit CanBuildFrom
+   in your class's companion object.

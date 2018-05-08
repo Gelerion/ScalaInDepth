@@ -1,0 +1,3 @@
+PATRICIA—Practical Algorithm To Retrieve Information Coded in Alphanumeric
+
+The idea is to store a set or a map as a tree where subsequent characters in a search key determines uniquely a descendant tree.
