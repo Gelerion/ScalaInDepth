@@ -1,0 +1,11 @@
+EXTRACTORS VERSUS CASE CLASSES
+Even though they are very useful, case classes have one shortcoming: they expose the concrete representation of data.
+This means that the name of the class in a constructor pattern corresponds to the concrete representation type of the
+selector object. If a match against:
+  case C(...)
+succeeds, you know that the selector expression is an instance of class C.
+
+Extractors break this link between data representations and patterns. You have seen in the examples in this section that
+they enable patterns that have nothing to do with the data type of the object that's selected on. This property is called
+representation independence. In open systems of large size, representation independence is very important because it
+allows you to change an implementation type used in a set of components without affecting clients of these components.
