@@ -1,0 +1,26 @@
+As a program grows in size, it becomes increasingly important to organize it in a modular way. First, being able to
+compile different modules that make up the system separately helps different teams work independently. In addition,
+being able to unplug one implementation of a module and plug in another is useful, because it allows different
+configurations of a system to be used in different contexts, such as unit testing on a developer's desktop, integration
+testing, staging, and deployment.
+
+For example, you may have an application that uses a database and a message service. As you write code, you may want to
+run unit tests on your desktop that use mock versions of both the database and message service, which simulate these
+services sufficiently for testing without needing to talk across the network to a shared resource. During integration
+testing, you may want to use a mock message service but a live developer database. During staging and certainly during
+deployment, your organization will likely want to use live versions of both the database and message service.
+
+Any technique that aims to facilitate this kind of modularity needs to provide a few essentials. First, there should be
+a module construct that provides a good separation of interface and implementation. Second, there should be a way to
+replace one module with another that has the same interface without changing or recompiling the modules that depend on
+the replaced one. Lastly, there should be a way to wire modules together. This wiring task can by thought of as
+configuring the system.
+
+One approach to solving this problem is dependency injection, a technique supported on the Java platform by frameworks
+such as Spring and Guice, which are popular in the enterprise Java community. Spring, for example, essentially
+allows you to represent the interface of a module as a Java interface and implementations of the module as Java classes.
+You can specify dependencies between modules and "wire" an application together via external XML configuration files.
+Although you can use Spring with Scala and thereby use Spring's approach to achieving system-level modularity of your
+Scala programs, with Scala you have some alternatives enabled by the language itself. In the remainder of this chapter,
+we'll show how to use objects as modules to achieve the desired "in the large" modularity without using an external
+framework.
