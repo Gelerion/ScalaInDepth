@@ -1,0 +1,52 @@
+SYNTAX OF ANNOTATIONS
+
+A typical use of an annotation looks like this:
+  @deprecated def bigMistake() = //...
+The annotation is the @deprecated part, and it applies to the entirety of the bigMistake method. In this case, the
+method is being marked as something the author of bigMistake wishes you not to use.
+
+Annotations can also be applied to an expression, as with the @unchecked annotation for pattern matching
+  (e: @unchecked) match {
+    // non-exhaustive cases...
+  }
+
+Finally, annotations can be placed on types.
+So far the annotations shown have been simply an at sign followed by an annotation class. Such simple annotations are
+common and useful, but annotations have a richer general form:
+    @annot(exp_{1}, exp_{2}, ...)
+
+The precise form of the arguments you may give to an annotation depends on the particular annotation class. Most
+annotation processors only let you supply immediate constants such as 123 or "hello". The compiler itself supports
+arbitrary expressions, however, so long as they type check. Some annotation classes can make use of this, for example,
+to let you refer to other variables that are in scope:
+
+  @cool val normal = "Hello"
+  @coolerThan(normal) val fonzy = "Heeyyy"
+
+--------
+Internally, Scala represents an annotation as just a constructor call of an annotation class—replace the `@' by `new'
+and you have a valid instance creation expression. This means that named and default annotation arguments are supported
+naturally, because Scala already has named and default arguments for method and constructor calls. One slightly tricky
+bit concerns annotations that conceptually take other annotations as arguments, which are required by some frameworks.
+You cannot write an annotation directly as an argument to an annotation, because annotations are not valid expressions.
+In such cases you must use `new' instead of `@', as illustrated here:
+      import annotation._
+      class strategy(arg: Annotation) extends Annotation
+      class delayed extends Annotation
+
+      @strategy(@delayed) def f() = {}
+      <console>:1: error: illegal start of simple expression
+             @strategy(@delayed) def f() = {}
+                       ^
+
+      @strategy(new delayed) def f() = {} // f: ()Unit
+
+
+STANDARD ANNOTATIONS
+ - Deprecation - @deprecated
+ - Volatile fields - @volatile
+ - Binary serialization - @serializable
+ - Automatic get and set methods -  @scala.reflect.BeanProperty
+ - Tailrec - @tailrec
+ - Unchecked - @unchecked
+ - Native methods - @native
