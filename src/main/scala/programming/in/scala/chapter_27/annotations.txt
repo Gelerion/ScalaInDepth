@@ -50,3 +50,8 @@ STANDARD ANNOTATIONS
  - Tailrec - @tailrec
  - Unchecked - @unchecked
  - Native methods - @native
+
+
+
+@throws(classOf[IOException])
+def read() = in.read()
