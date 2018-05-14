@@ -1,0 +1,15 @@
+One consequence of the proliferation of multicore processors has been an increased interest in concurrency. Java provides
+concurrency support built around shared memory and locking. Although this support is sufficient, this approach turns out
+to be quite difficult to get right in practice. Scala's standard library offers an alternative that avoids these difficulties
+by focusing on asynchronous transformations of immutable state: the Future.
+
+Although Java also offers a Future, it is very different from Scala's. Both represent the result of an asynchronous computation,
+but Java's Future requires that you access the result via a blocking get method. Although you can call isDone to find out
+if a Java Future has completed before calling get, thereby avoiding any blocking, you must wait until the Java Future has
+completed before proceeding with any computation that uses the result.
+
+By contrast, you can specify transformations on a Scala Future whether it has completed or not. Each transformation results
+in a new Future representing the asynchronous result of the original Future transformed by the function. The thread that
+performs the computation is determined by an implicitly provided execution context. This allows you to describe
+asynchronous computations as a series of transformations of immutable values, with no need to reason about shared
+memory and locks.
