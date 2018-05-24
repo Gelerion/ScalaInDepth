@@ -1,0 +1,35 @@
+The ParseJSON program successfully parsed the JSON address book. However, the parser output looks strange. It seems
+to be a sequence composed of bits and pieces of the input glued together with lists and ~ combinations. This output
+is not very useful. It is less readable for humans than the input, but it is also too disorganized to be easily
+analyzable by a computer. It's time to do something about this.
+
+To figure out what to do, you need to know first what the individual parsers in the combinator frameworks return as
+a result (provided they succeed in parsing the input). Here are the rules:
+
+1. Each parser written as a string (such as: "{" or ":" or "null") returns the parsed string itself.
+2. Regular expression parsers such as """[a-zA-Z_]\w*""".r also return the parsed string itself. The same holds for
+   regular expression parsers such as stringLiteral or floatingPointNumber, which are inherited from trait JavaTokenParsers.
+3. A sequential composition P~Q returns the results of both P and of Q. These results are returned in an instance of a
+   case class that is also written ~. So if P returns "true" and Q returns "?", then the sequential composition
+   P~Q returns ~("true", "?"), which prints as (true~?).
+4. An alternative composition P | Q returns the result of either P or Q, whichever one succeeds.
+5. A repetition rep(P) or repsep(P, separator) returns a list of the results of all runs of P.
+6. An option opt(P) returns an instance of Scala's Option type. It returns Some(R) if P succeeds with result R and None if P fails.
+
+
+
+With these rules you can now deduce why the parser output appeared as it did in the previous examples. However, the
+output is still not very convenient. It would be much better to map a JSON object into an internal Scala representation
+that represents the meaning of the JSON value. A more natural representation would be as follows:
+
+ * A JSON object is represented as a Scala map of type Map[String, Any]. Every member is represented as a key/value binding in the map.
+ * A JSON array is represented as a Scala list of type List[Any].
+ * A JSON string is represented as a Scala String.
+ * A JSON numeric literal is represented as a Scala Double.
+ * The values true, false, and null are represented as the Scala values with the same names.
+
+To produce this representation, you need to make use of one more combination form for parsers: ^^.
+
+As an example, here is a parser that parses a floating point number and converts it to a Scala value of type Double:
+
+  floatingPointNumber ^^ (_.toDouble)

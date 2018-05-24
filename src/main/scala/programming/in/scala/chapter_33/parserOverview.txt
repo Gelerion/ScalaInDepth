@@ -1,0 +1,16 @@
+Parser input
+
+Sometimes, a parser reads a stream of tokens instead of a raw sequence of characters. A separate lexical analyzer is
+then used to convert a stream of raw characters into a stream of tokens. The type of parser inputs is defined as follows:
+
+  type Input = Reader[Elem]
+
+The class Reader comes from the package scala.util.parsing.input. It is similar to a Stream, but also keeps track of
+the positions of all the elements it reads. The type Elem represents individual input elements. It is an abstract type
+member of the Parsers trait:
+
+  type Elem
+
+This means that subclasses and subtraits of Parsers need to instantiate class Elem to the type of input elements that
+are being parsed. For instance, RegexParsers and JavaTokenParsers fix Elem to be equal to Char. But it would also be
+possible to set Elem to some other type, such as the type of tokens returned from a separate lexer.

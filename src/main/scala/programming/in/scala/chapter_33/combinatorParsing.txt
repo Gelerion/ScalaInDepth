@@ -1,0 +1,27 @@
+Occasionally, you may need to process a small, special-purpose language. For example, you may need to read configuration
+files for your software, and you want to make them easier to modify by hand than XML. Alternatively, maybe you want to
+support an input language in your program, such as search terms with boolean operators
+(computer, find me a movie "with `space ships' and without `love stories"'). Whatever the reason, you are going to need
+a parser. You need a way to convert the input language into some data structure your software can process.
+
+Essentially, you have only a few choices. One choice is to roll your own parser (and lexical analyzer). If you are not
+an expert, this is hard. If you are an expert, it is still time consuming.
+
+An alternative choice is to use a parser generator. There exist quite a few of these generators. Some of the better known
+are Yacc and Bison for parsers written in C and ANTLR for parsers written in Java. You'll probably also need a scanner
+generator such as Lex, Flex, or JFlex to go with it. This might be the best solution, except for a couple of inconveniences.
+You need to learn new tools, including their—sometimes obscure—error messages. You also need to figure out how to connect
+the output of these tools to your program. This might limit the choice of your programming language, and complicate
+your tool chain.
+
+There is a third alternative. Instead of using the standalone domain specific language of a parser generator,
+you will use an internal domain specific language, or internal DSL for short. The internal DSL will consist of a library
+of parser combinators—functions and operators defined in Scala that will serve as building blocks for parsers. These
+building blocks will map one to one to the constructions of a context-free grammar, to make them easy to understand.
+
+
+Scala's parsing combinators are arranged in a hierarchy of traits, which are all contained in package
+scala.util.parsing.combinator. The top-level trait is Parsers, which defines a very general parsing framework for all
+sorts of input. One level below is trait RegexParsers, which requires that the input is a sequence of characters and
+provides for regular expression parsing. Even more specialized is trait JavaTokenParsers, which implements parsers for
+basic classes of words (or tokens) as they are defined in Java.

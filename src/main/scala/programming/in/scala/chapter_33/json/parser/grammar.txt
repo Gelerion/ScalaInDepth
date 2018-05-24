@@ -1,0 +1,27 @@
+value	::=	obj  |  arr  |  stringLiteral  | floatingPointNumber  | "null"  |  "true"  |  "false".
+obj	    ::=	"{"  [members]  "}".
+arr	    ::=	"["  [values]  "]".
+members	::=	member  \{","  member\}.
+member	::=	stringLiteral  ":"  value.
+values	::=	value  \{","  value\}.
+
+A JSON value is an object, array, string, number, or one of the three reserved words null, true, or false. A JSON object
+is a (possibly empty) sequence of members separated by commas and enclosed in braces. Each member is a string/value pair
+where the string and the value are separated by a colon. Finally, a JSON array is a sequence of values separated by
+commas and enclosed in square brackets
+
+Example:
+   {
+      "address book": {
+        "name": "John Smith",
+        "address": {
+          "street": "10 Market Street",
+          "city"  : "San Francisco, CA",
+          "zip"   : 94111
+        },
+        "phone numbers": [
+          "408 338-4238",
+          "408 111-6892"
+        ]
+      }
+    }

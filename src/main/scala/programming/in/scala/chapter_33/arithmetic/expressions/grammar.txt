@@ -1,0 +1,17 @@
+We'll start with an example. Say you want to construct a parser for arithmetic expressions consisting of floating-point
+numbers, parentheses, and the binary operators +, -, *, and /. The first step is always to write down a grammar for the
+language to be parsed. Here's the grammar for arithmetic expressions:
+
+expr	::=	term  \{"+"  term  |  "-"  term\}.
+term	::=	factor  \{"*"  factor  |  "/"  factor\}.
+factor	::=	floatingPointNumber  |  "("  expr  ")".
+
+Here, | denotes alternative productions, and \{ ... \} denotes repetition (zero or more times). And although there's
+no use of it in this example, [ ... ] denotes an optional occurrence.
+
+This context-free grammar defines formally a language of arithmetic expressions. Every expression (represented by expr)
+is a term, which can be followed by a sequence of + or - operators and further terms. A term is a factor, possibly
+followed by a sequence of * or / operators and further factors. A factor is either a numeric literal or an expression
+in parentheses. Note that the grammar already encodes the relative precedence of operators. For instance, * binds more
+tightly than +, because a * operation gives a term, whereas a + operation gives an expr, and exprs can contain terms
+but a term can contain an expr only when the latter is enclosed in parentheses.
