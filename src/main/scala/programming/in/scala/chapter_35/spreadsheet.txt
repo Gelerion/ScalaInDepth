@@ -1,0 +1,6 @@
+There are several reasons why this task is interesting. First, everybody knows spreadsheets, so it is easy to understand
+what the application should do. Second, spreadsheets are programs that exercise a large range of different computing tasks.
+There's the visual aspect, where a spreadsheet is seen as a rich GUI application. There's the symbolic aspect, having
+to do with formulas and how to parse and interpret them. There's the calculational aspect, dealing with how to update
+possibly large tables incrementally. There's the reactive aspect, where spreadsheets are seen as programs that react in
+intricate ways to events. Finally, there's the component aspect where the application is constructed as a set of reusable components.
