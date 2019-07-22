@@ -4,6 +4,18 @@ package programming.in.scala.chapter_19.contravariance
   * Created by denis.shuvalov on 09/04/2018.
   * Here, OutputChannel is defined to be contravariant in T. So an output channel of AnyRefs, say,
   * is a subtype of an output channel of Strings
+  *
+  * Contravariance
+  * A type parameter A of a generic class can be made contravariant by using the annotation -A.
+  * This creates a subtyping relationship between the class and its type parameter that is similar, but opposite
+  * to what we get with covariance. That is, for some class Writer[-A], making A contravariant implies that for
+  * two types A and B where A is a subtype of B, Writer[B] is a subtype of Writer[A]
+  *
+  * If a Printer[Cat] knows how to print any Cat to the console, and a Printer[Animal] knows how to print any
+  * Animal to the console, it makes sense that a Printer[Animal] would also know how to print any Cat.
+  * The inverse relationship does not apply, because a Printer[Cat] does not know how to print any Animal to the console.
+  * Therefore, we should be able to substitute a Printer[Animal] for a Printer[Cat], if we wish, and making
+  * Printer[A] contravariant allows us to do exactly that.
   */
 trait OutputChannel[-T] {
 

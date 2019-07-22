@@ -9,6 +9,7 @@ class TypedQueue[+T](private val leading: List[T], private val trailing: List[T]
 
   //there's a way to get unstuck: you can generalize enqueue by making it polymorphic (i.e., giving the enqueue
   //method itself a type parameter) and using a lower bound for its type parameter.
+  // U must be supertype of T inclusive
   def enqueue[U >: T](x: U) = new TypedQueue[U](leading, x :: trailing)
 
   //The new definition gives enqueue a type parameter U, and with the syntax, "U >: T", defines T as the lower bound for U.
