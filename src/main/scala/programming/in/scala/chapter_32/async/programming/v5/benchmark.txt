@@ -1,0 +1,34 @@
+The trouble with Future is that each call to onComplete will use an ExecutionContext for execution and in general
+this means that a Runnable is sent in a thread-pool, thus forking a (logical) thread. If you have CPU-bounded tasks,
+this implementation detail is actually a disaster for performance because jumping threads means context switches,
+along with the CPU cache locality being destroyed. Of course, the implementation does have certain optimizations,
+like the flatMap implementation using an internal execution context that's trampolined, in order to avoid forks
+when chaining those internal callbacks, but it's not enough and benchmarking doesn't lie.
+
+Also due to it being memoized means that upon completion the implementation is forced to execute at least one
+AtomicReference.compareAndSet per producer, plus one compareAndSet call per listener registered before the
+Future is complete. And such calls are quite expensive, all because we need memoization that plays well with multithreading.
+
+In other words if you want to exploit your CPU to its fullest for CPU-bound tasks, then working with
+futures and promises is not such a good idea.
+
+If you want to see how Scala's Future implementation compares with Task, see the following recent benchmark:
+
+[info] Benchmark                   (size)   Mode  Cnt     Score     Error  Units
+[info] FlatMap.fs2Apply             10000  thrpt   20   291.459 ±   6.321  ops/s
+[info] FlatMap.fs2Delay             10000  thrpt   20  2606.864 ±  26.442  ops/s
+[info] FlatMap.fs2Now               10000  thrpt   20  3867.300 ± 541.241  ops/s
+[info] FlatMap.futureApply          10000  thrpt   20   212.691 ±   9.508  ops/s
+[info] FlatMap.futureSuccessful     10000  thrpt   20   418.736 ±  29.121  ops/s
+[info] FlatMap.futureTrampolineEc   10000  thrpt   20   423.647 ±   8.543  ops/s
+[info] FlatMap.monixApply           10000  thrpt   20   399.916 ±  15.858  ops/s
+[info] FlatMap.monixDelay           10000  thrpt   20  4994.156 ±  40.014  ops/s
+[info] FlatMap.monixNow             10000  thrpt   20  6253.182 ±  53.388  ops/s
+[info] FlatMap.scalazApply          10000  thrpt   20   188.387 ±   2.989  ops/s
+[info] FlatMap.scalazDelay          10000  thrpt   20  1794.680 ±  24.173  ops/s
+[info] FlatMap.scalazNow            10000  thrpt   20  2041.300 ± 128.729  ops/s
+As you can see the Monix Task destroys Scala's Future for CPU-bound tasks.
+
+NOTE: this benchmark is limited, there are still use-cases where usage of Future is faster
+(e.g. the Monix Observer uses Future for back-pressure for a good reason) and performance is often not relevant,
+like when doing I/O, in which case throughput will not be CPU-bound.
