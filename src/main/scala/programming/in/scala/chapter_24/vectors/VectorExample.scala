@@ -8,6 +8,8 @@ package programming.in.scala.chapter_24.vectors
   * of a list or for reading an element of an array, but it's a constant nonetheless. As a result, algorithms using
   * vectors do not have to be careful about accessing just the head of the sequence. They can access and modify elements
   * at arbitrary locations, and thus they can be much more convenient to write.
+  *
+  * http://www.lihaoyi.com/post/ScalaVectoroperationsarentEffectivelyConstanttime.html
   */
 object VectorExample {
   val vec = scala.collection.immutable.Vector.empty
