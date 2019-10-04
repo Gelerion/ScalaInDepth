@@ -85,6 +85,109 @@ and use it as follows:
 writeCsv(iceCreams)
 ```
 
+## Literal types
+A Scala value may have multiple types. 
+For example, the string `"hello"` has at least three types: `String`, `AnyRef`, and `Any`
+```
+"hello" : String
+"hello" : AnyRef
+"hello" : Any
+```
+Interestingly, "hello" also has another type: a “singleton type” that belongs exclusively to that one value. 
+This is similar to the singleton type we get when we define a companion object:
+```
+object Foo
+Foo.type = Foo$@5c32f469
+```
+The type `Foo.type` is the type of `Foo`, and `Foo` is the only value with that type.
+Singleton types applied to literal values are called **literal types**.
+  
+`Shapeless` provides a few tools for working with literal types. First, there is a narrow macro that converts 
+a literal expression to a singleton-typed literal expression:
+```scala
+import shapeless.syntax.singleton._
+var x = 42.narrow //Int(42) = 42
+```
+Note the type of x here: `Int(42)` is a **literal type**. It is a subtype of `Int` that only contains the value `42`. 
+If we attempt to assign a different number to x, we get a compile error:
+```
+x = 43 //error: type mismatch - Int(43)
+```
+
+## Polymorphic Functions
+“Regular” Scala programs make heavy use of functional operations like map and flatMap. A question arises: can we perform 
+similar operations on HLists? The answer is “yes”, although we have to do things a little differently than in regular Scala. 
+Unsurprisingly the mechanisms we use are type class based and there are a suite of ops type classes to help us out.
+  
+The heterogeneous element types in an HList cause this model to break down. Scala functions have fixed input and output types, 
+so the result of our map will have to have the same element type in every position.
+```scala
+trait Case[P, A] {
+  type Result
+  def apply(a: A): Result
+}
+
+trait Poly {
+  def apply[A](arg: A)(implicit cse: Case[this.type, A]): cse.Result =
+    cse.apply(arg)
+}
+```
+`Shapeless` Poly syntax
+```scala
+import shapeless._
+
+object myPoly extends Poly1 {
+  implicit val intCase: Case.Aux[Int, Double] =
+    at(num => num / 2.0)
+
+  implicit val stringCase: Case.Aux[String, Int] =
+    at(str => str.length)
+}
+
+myPoly.apply(123)
+```
+
+#### Mapping and flatMapping using Poly
+```scalaArbitrary 
+(10 :: "hello" :: true :: HNil).map(sizeOf)
+(10 :: "hello" :: true :: HNil).flatMap(valueAndSizeOf)
+```
+
+#### Folding using Poly
+```scala
+(10 :: "hello" :: 100 :: HNil).foldLeft(0)(sum)
+```
+
+#### Defining type classes using Poly
+```scala
+object conversions extends Poly1 {
+  implicit val intCase:  Case.Aux[Int, Boolean]   = at(_ > 0)
+  implicit val boolCase: Case.Aux[Boolean, Int]   = at(if(_) 1 else 0)
+  implicit val strCase:  Case.Aux[String, String] = at(identity)
+}
+
+case class IceCream1(name: String, numCherries: Int, inCone: Boolean)
+case class IceCream2(name: String, hasCherries: Boolean, numCones: Int)
+
+IceCream1("Sundae", 1, false).mapTo[IceCream2](conversions)
+```
+
+# Case study: random value generator
+Property-based testing libraries like ScalaCheck use type classes to generate random data for unit tests. 
+For example, ScalaCheck provides the Arbitrary type class that we can use as follows:
+```scala
+import org.scalacheck._
+
+for(i <- 1 to 3) println(Arbitrary.arbitrary[Int].sample)
+// Some(1)
+// Some(1813066787)
+// Some(1637191929)
+
+for(i <- 1 to 3) println(Arbitrary.arbitrary[(Boolean, Byte)].sample)
+// Some((true,127))
+// Some((false,83))
+// Some((false,-128))
+```
 
 # Shapeless
 https://books.underscore.io/shapeless-guide/shapeless-guide.html
