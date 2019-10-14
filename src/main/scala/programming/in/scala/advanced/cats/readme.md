@@ -189,6 +189,174 @@ replicated data types (CRDTs). The key operation is the ability to merge two dat
 that captures all the information in both instances. This operation relies on having a monoid instance
 
 
+# Functor
+Functors on their own aren’t so useful, but special cases of functors such as monads 
+and applicative functors are some of the most commonly used abstractions in Cats.
+  
+Informally, a functor is anything with a `map` method. You probably know lots of types that have this: 
+`Option, List, and Either`, to name a few.
+  
+We typically first encounter map when iterating over `Lists`. However, to understand functors we need to think of 
+the method in another way. Rather than traversing the list, we should think of it as transforming all of 
+the values inside in `one go`. We specify the function to apply, and map ensures it is applied to every item. 
+The values change but the structure of the list remains the same:
+```scala
+List(1, 2, 3).map(n => n + 1)
+```
+Similarly, when we map over an `Option`, we transform the contents but leave the `Some` or `None` context unchanged. 
+The same principle applies to `Either` with its `Left` and `Right` contexts.
+  
+Because `map` leaves the structure of the context unchanged, we can call it repeatedly to sequence multiple 
+computations on the contents of an initial data structure:
+```scala
+List(1, 2, 3).
+  map(n => n + 1).
+  map(n => n * 2).
+  map(n => n + "!")
+```
+
+#### Functions 
+It turns out that single argument functions are also functors. To see this we have to tweak the types a little. 
+A function `A => B` has two type parameters: the parameter type `A` and the result type `B`.
+“mapping” over a Function1 is function composition:
+```scala
+import cats.instances.function._ // for Functor
+import cats.syntax.functor._     // for map
+
+val func1: Int => Double = (x: Int) => x.toDouble
+val func2: Double => Double = (y: Double) => y * 2
+
+(func1 map func2)(1)     // composition using map
+// res7: Double = 2.0
+
+(func1 andThen func2)(1) // composition using andThen
+// res8: Double = 2.0
+
+func2(func1(1))          // composition written out by hand
+// res9: Double = 2.0
+```
+
+#### Definition of a Functor
+Every example we’ve looked at so far is a functor: a class that encapsulates sequencing computations. 
+Formally, a functor is a type `F[A]` with an operation map with type `(A => B) => F[B]`
+
+Cats encodes `Functor` as a type class, `cats.Functor`, so the method looks a little different. 
+It accepts the initial `F[A]` as a parameter alongside the transformation function.
+```scala
+import scala.language.higherKinds
+
+trait Functor[F[_]] {
+  def map[A, B](fa: F[A])(f: A => B): F[B]
+}
+```
+
+#### Functor Laws
+Functors guarantee the same semantics whether we sequence many small operations one by one, or combine them 
+into a larger function before `mapping`. To ensure this is the case the following laws must hold:
+- **Identity**: calling `map` with the identity function is the same as doing nothing:
+```
+fa.map(a => a) == fa
+```
+- **Composition**: `mapping` with two functions `f` and `g` is the same as mapping with `f` and then `mapping` with `g`:
+```
+fa.map(g(f(_))) == fa.map(f).map(g)
+```
+
+#### Functor Syntax
+We’ll abstract over functors so we’re not working with any particular concrete type. We can write 
+a method that applies an equation to a number no matter what functor context it’s in:
+```scala
+def doMath[F[_]](start: F[Int])
+    (implicit functor: Functor[F]): F[Int] =
+  start.map(n => n + 1 * 2)
+
+import cats.instances.option._ // for Functor
+import cats.instances.list._   // for Functor
+
+doMath(Option(20))
+// res3: Option[Int] = Some(22)
+
+doMath(List(1, 2, 3))
+// res4: List[Int] = List(3, 4, 5)
+```
+
+### Contravariant and Invariant Functors
+As we have seen, we can think of Functor's map method as “appending” a transformation to a chain. 
+We’re now going to look at two other type classes, one representing prepending operations to a 
+chain, and one representing building a bidirectional chain of operations. These are called 
+contravariant and invariant functors respectively.
+```scala
+trait Printable[A] {
+  self =>
+
+  def format(value: A): String
+
+  def contramap[B](func: B => A): Printable[B] =
+    new Printable[B] {
+      def format(value: B): String =
+        self.format(func(value))
+    }
+}
+
+def format[A](value: A)(implicit p: Printable[A]): String =
+  p.format(value)
+```
+Now define an instance of Printable for the following Box case class.
+
+To make the instance generic across all types of Box, we base it on the Printable for the type
+inside the Box. We can either write out the complete definition by hand:
+```scala
+implicit def boxPrintable[A](implicit p: Printable[A]) =
+  new Printable[Box[A]] {
+    def format(box: Box[A]): String =
+      p.format(box.value)
+  }
+```
+or use contramap to base the new instance on the implicit parameter:
+```scala
+implicit def boxPrintable[A](implicit p: Printable[A]) =
+  p.contramap[Box[A]](_.value)
+```
+
+### Invariant functors and the imap method
+Invariant functors implement a method called `imap` that is informally equivalent to a combination of 
+`map` and `contramap`. If map generates new type class instances by appending a function to a chain, and 
+`contramap` generates them by prepending an operation to a chain, `imap` generates them via a pair of 
+bidirectional transformations.
+```scala
+trait Codec[A] {
+  def encode(value: A): String
+  def decode(value: String): A
+
+  def imap[B](dec: A => B, enc: B => A): Codec[B] = {
+    val self = this
+    new Codec[B] {
+      def encode(value: B): String =
+        self.encode(enc(value))
+
+      def decode(value: String): B =
+        dec(self.decode(value))
+    }
+  }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
