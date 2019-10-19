@@ -12,6 +12,7 @@ object InvariantCats {
 
     println(Monoid[Symbol].empty) //'
 
-    println('a |+| 'few |+| 'words) 'afewwords
+//    val s: Symbol = 'a |+| 'few |+| 'words 'afewwords
+//    println(s)
   }
 }

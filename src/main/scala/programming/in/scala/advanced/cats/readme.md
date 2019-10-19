@@ -341,25 +341,74 @@ trait Codec[A] {
 }
 ```
 
+# Monads
+Monads are one of the most common abstractions in Scala. Many Scala programmers quickly become intuitively familiar 
+with monads, even if we don’t know them by name.
 
+> A monad is a mechanism for sequencing computations.
 
+#### Definition of a Monad
 
+- `pure`, of type `A => F[A]`;
+- `flatMap`, of type `(F[A], A => F[B]) => F[B]`.
 
+`pure` abstracts over constructors, providing a way to create a new monadic context from a plain value. 
+`flatMap` provides the sequencing step we have already discussed, extracting the value from a context 
+and generating the next context in the sequence. Here is a simplified version of the Monad type 
+class in Cats:
+```scala
+import scala.language.higherKinds
 
+trait Monad[F[_]] {
+  def pure[A](value: A): F[A]
+  def flatMap[A, B](value: F[A])(func: A => F[B]): F[B]
+}
+```
 
+#### Monad Laws
+`pure` and `flatMap` must obey a set of laws that allow us to sequence operations freely without 
+unintended glitches and side-effects:
+ - **Left identity**: calling `pure` and transforming the result with `func` is the same as calling `func`:
+ ```pure(a).flatMap(func) == func(a)```
+ 
+ - **Right identity**: passing pure to `flatMap` is the same as doing nothing:
+```m.flatMap(pure) == m```
 
+ - **Associativity**: flatMapping over two functions f and g is the same as flatMapping over f and 
+ then flatMapping over g:
+ ```m.flatMap(f).flatMap(g) == m.flatMap(x => f(x).flatMap(g))```
 
-
-
-
-
-
-
-
-
-
-
-
+#### Identity Monad
+It’s difficult to demonstrate the `flatMap` and `map` methods directly on Scala monads like 
+`Option` and `List`, because they define their own explicit versions of those methods. 
+Instead we’ll write a generic function that performs a calculation on parameters that come wrapped in a monad of the user’s choice:
+```scala
+def sumSquare[F[_]: Monad](a: F[Int], b: F[Int]): F[Int] =
+  a.flatMap(x => b.map(y => x*x + y*y))
+```
+With proper imports:
+```scala
+sumSquare(Option(3), Option(4))
+sumSquare(List(1, 2, 3), List(4, 5))
+```
+This method works well on `Option`s and `List`s but we can’t call it passing in plain values:
+```
+sumSquare(3, 4) 
+//error: no type parameters for method sumSquare
+```
+It would be incredibly useful if we could use `sumSquare` with parameters that were either 
+in a monad or not in a monad at all. This would allow us to abstract over monadic and 
+non-monadic code. Fortunately, Cats provides the `Id` type to bridge the gap:
+```scala
+import cats.Id
+sumSquare(3 : Id[Int], 4 : Id[Int])
+```
+`Id` allows us to call our monadic method using plain values. 
+What’s going on? Here is the definition of `Id` to explain:
+```scala
+type Id[A] = A
+```
+`Id` is actually a type alias that turns an atomic type into a single-parameter type constructor.
 
 
 
