@@ -410,25 +410,83 @@ type Id[A] = A
 ```
 `Id` is actually a type alias that turns an atomic type into a single-parameter type constructor.
 
+#### Either Monad
+Let’s look at another useful monad: the `Either` type from the Scala standard library. 
+In Scala 2.11 and earlier, many people didn’t consider Either a monad because it didn’t 
+have `map` and `flatMap` methods. In Scala 2.12, however, Either became right biased.
+```scala
+val either1: Either[String, Int] = Right(10)
+val either2: Either[String, Int] = Right(32)
+
+for {
+  a <- either1.right //just either1 (scala 2.12)
+  b <- either2.right //just either2 (scala 2.12)
+} yield a + b
+```
+Cats back-ports this behaviour to Scala 2.11 via the cats.syntax.either import, allowing us 
+to use right-biased `Either` in all supported versions of Scala.
+
+#### The Eval Monad
+`cats.Eval` is a monad that allows us to abstract over different **models of evaluation**. 
+We typically hear of two such models: **eager** and **lazy**. `Eval` throws in a further 
+distinction of whether or not a result is *memoized*.
+  
+- Eager computations happen immediately whereas 
+- Lazy computations happen on access. 
+- Memoized computations are run once on first access, after which the results are cached.
+  
+Scala `vals` are eager and memoized
+```scala
+val x = {
+  println("Computing X")
+  math.random
+}
+//Computing X
+// x: Double = 0.052234880483295054
+x // first access
+// res0: Double = 0.052234880483295054
+x // second access
+// res1: Double = 0.052234880483295054
+```
+By contrast, `defs` are lazy and not memoized.
+```scala
+def y = {
+  println("Computing Y")
+  math.random
+}
+// y: Double
+
+y // first access
+// Computing Y
+// res2: Double = 0.39447833704011936
+
+y // second access
+// Computing Y
+// res3: Double = 0.7866745482741204
+```
+  
+**Eval’s Models of Evaluation**
+```scala
+val now = Eval.now(math.random + 1000) //Now(1000.0817186632896)
+val later = Eval.later(math.random + 2000) //cats.Later@32220dad
+val always = Eval.always(math.random + 3000) //cats.Always@7553edc9
+```
+**Note!**
+[Trampolining and stack safety in Scala](https://medium.com/@olxc/trampolining-and-stack-safety-in-scala-d8e86474ddfa)
+Trampolining and `Eval.defer`
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Useful `Monad`s 
+ 
+### The Writer Monad
+`cats.data.Writer` is a monad that lets us carry a log along with a computation.
+We can use it to record messages, errors, or additional data about a computation, 
+and extract the log alongside the final result.
+  
+One common use for Writers is recording sequences of steps in multi-threaded 
+computations where standard imperative logging techniques can result in interleaved 
+messages from different contexts. With Writer the log for the computation is tied to 
+the result, so we can run concurrent computations without mixing logs.  
 
 
 
