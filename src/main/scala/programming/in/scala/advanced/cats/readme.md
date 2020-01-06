@@ -529,8 +529,11 @@ For more advanced problems where we have lots of dependencies, or where a progra
 isn’t easily represented as a pure function, other dependency injection techniques 
 tend to be more appropriate.
 
-
-
+### The State Monad
+`cats.data.State` allows us to pass additional state around as part of a computation. 
+We define `State` instances representing atomic state operations and thread them together 
+using `map` and `flatMap`. In this way we can model mutable state in a purely functional way, 
+without using mutation.
 
 
 
