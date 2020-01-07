@@ -536,11 +536,47 @@ using `map` and `flatMap`. In this way we can model mutable state in a purely fu
 without using mutation.
 
 
+# Monad Transformers
+Imagine we are interacting with a database. We want to look up a user record. The user may or may not be present, 
+so we return an `Option[User]`. Our communication with the database could fail for many reasons (network issues, 
+authentication problems, and so on), so this result is wrapped up in an Either, giving us a final 
+result of `Either[Error, Option[User]]`.
 
+To use this value we must nest `flatMap` calls (or equivalently, for-comprehensions):
+```scala
+def lookupUserName(id: Long): Either[Error, Option[String]] =
+  for {
+    optUser <- lookupUser(id)
+  } yield {
+    for { user <- optUser } yield user.name
+  }
+```
+This quickly becomes very tedious.
+  
+Cats provides transformers for many monads, each named with a `T` suffix: `EitherT` composes `Either` with other monads, 
+`OptionT` composes `Option`, and so on.
+Here’s an example that uses `OptionT` to compose `List` and `Option`. We can use `OptionT[List, A]`, aliased to `ListOption[A]` 
+for convenience, to transform a `List[Option[A]]` into a single monad:
+```scala
+import cats.data.OptionT
 
+type ListOption[A] = OptionT[List, A] //List[Option[A]]
+```
+  
+Many monads in Cats are defined by combining a monad transformer with the Id monad. 
+Concretely, some of the available instances are:
+ - cats.data.OptionT for Option;
+ - cats.data.EitherT for Either;
+ - cats.data.ReaderT for Reader;
+ - cats.data.WriterT for Writer;
+ - cats.data.StateT for State;
+ - cats.data.IdT for the Id monad.
 
-
-
-
-
-
+Many monads in Cats are defined using the corresponding transformer and the `Id` monad. 
+This is reassuring as it confirms that the APIs for monads and transformers are identical. 
+`Reader`, `Writer`, and `State` are all defined in this way:
+```scala
+type Reader[E, A] = ReaderT[Id, E, A] // = Kleisli[Id, E, A]
+type Writer[W, A] = WriterT[Id, W, A]
+type State[S, A]  = StateT[Id, S, A]
+```
