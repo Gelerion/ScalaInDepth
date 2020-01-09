@@ -68,10 +68,12 @@ object CatsTraversable {
   import cats.syntax.applicative._ // for pure
 
 
-  def listTraverse[F[_]: Applicative, A, B](list: List[A])(func: A => F[B]): F[List[B]] =
-    list.foldLeft(List.empty[B].pure[F]) { (accum, item) =>
+  def listTraverse[F[_]: Applicative, A, B](list: List[A])(func: A => F[B]): F[List[B]] = {
+    val empty: F[List[B]] = List.empty[B].pure[F]
+    list.foldLeft(empty) { (accum, item) =>
       (accum, func(item)).mapN(_ :+ _)
     }
+  }
 
   def listSequence[F[_]: Applicative, B](list: List[F[B]]): F[List[B]] =
     listTraverse(list)(identity)

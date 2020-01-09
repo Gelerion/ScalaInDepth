@@ -595,13 +595,102 @@ with an instance of `Traverse` and any `G` with an instance of `Applicative`.
 In terms of the reduction we get in lines of code, `Traverse` is one of the most powerful patterns.
 We can reduce `folds` of many lines down to a single `foo.traverse`.
  
+# Keywords
+ - `Type Class Instances`  
+The instances of a type class provide implementations for the types we care about, including types 
+from the Scala standard library and types from our domain model.
+```scala
+object JsonWriterInstances {
+  implicit val stringWriter: JsonWriter[String] = new JsonWriter[String] {
+      def write(value: String): Json = JsString(value)
+  }
+```
+  
+ - `Type Class Interfaces`  
+A type class *interface* is any functionality we expose to users.  
+Interfaces are generic methods that accept instances of the type class as implicit parameters.  
+There are two common ways of specifying an interface: *Interface Objects* and *Interface Syntax*.
+  
+Interface Objects:
+```scala
+object Json {
+  def toJson[A](value: A)(implicit w: JsonWriter[A]): Json = w.write(value)
+}
 
+//Usage
+import JsonWriterInstances._
+Json.toJson(Person("Dave", "dave@example.com"))
+```
+  
+Interface Syntax:
+```scala
+object JsonSyntax {
+  implicit class JsonWriterOps[A](value: A) {
+    def toJson(implicit w: JsonWriter[A]): Json = w.write(value)
+  }
+}
+
+//Usage
+import JsonWriterInstances._
+import JsonSyntax._
+Person("Dave", "dave@example.com").toJson
+``` 
  
- 
- 
- 
- 
- 
- 
- 
- 
+Recursive Implicit Resolution:
+```scala
+implicit def optionWriter[A](implicit writer: JsonWriter[A]): JsonWriter[Option[A]] =
+  new JsonWriter[Option[A]] {
+    def write(option: Option[A]): Json =
+      option match {
+        case Some(aValue) => writer.write(aValue)
+        case None         => JsNull
+      }
+  }
+```
+### Functional 
+ - `Monoid`  
+Formally, a monoid for a type `A` is:  
+1. an operation `combine` with type `(A, A) => A`  
+2. an element `empty` of type `A`  
+In addition to providing the combine and empty operations, monoids must formally obey several laws: *associative* and *identity*   
+  
+ - `Semigroup`  
+A semigroup is just the `combine` part of a monoid. 
+
+- `Functor`  
+Informally, a functor is anything with a `map` method.
+Formally, a functor is a type `F[A]` with an operation map with type `(A => B) => F[B]`
+(contravariant and invariant functors)
+  
+- `Monad`  
+A monad is a mechanism for sequencing computations.  
+Informally, a monad is anything with a constructor and a `flatMap` method  
+Monadic behaviour is formally captured in two operations
+1. `pure`, of type `A => F[A]`
+2. flatMap, of type `(F[A], A => F[B]) => F[B]`
+
+- `Monad Transformers`  
+  
+- `Semigroupal`  
+Encompasses the notion of composing pairs of contexts.  
+Cats provides a `cats.syntax.apply` module that makes use of `Semigroupal` and `Functor` to allow 
+users to sequence functions with multiple arguments.  
+
+```scala
+trait Semigroupal[F[_]] {
+  def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
+}
+
+//Example
+Semigroupal[Future]. product(Future("Hello"), Future(123)) //(String, Int) = (Hello, 123)
+```
+
+- `Applicative`  
+`Applicative` extends `Semigroupal` and `Functor`.  
+It provides a way of applying functions to parameters within a context.  
+Applicative is the source of the `pure` method
+```scala
+trait Applicative[F[_]] extends Apply[F] {
+  def pure[A](a: A): F[A]
+}
+```
